@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>UK Festivals</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!--Setting up the CSS styles-->
+<style type="text/css">
+
+	  html {
+		height: 100%;   
+	  }
+	
+	  #gears{
+		width:50%;  
+	  }
+	  
+	  img {
+	  border:none;
+	  }	
+
+	  body {
+		  height: 100%; 
+		  margin: 0px; 
+		  padding: 0px;
+		  background: none;
+	  } 	  
+	  
+	  #overall_wrapper {
+		  height: 100%;
+		  width: 100%; 
+		  margin:0px;
+		  padding:0px;
+		  border:none;
+		  background:none;
+	  }
+	  
+	  #title_box{
+	      width: 100%;
+		  background-color:#89cbed;
+		  text-align:center;
+		  margin:0px;
+		  padding-top:5px;
+		  padding-bottom:10px;
+		  border:none;
+	  }
+	  
+	  #yellow_line_and_arrow{
+		  display:none;
+	  }
+	  
+	  #button_to_map_standard{
+	      width: 100%;
+		  background: none;
+		  text-align:center;
+		  margin-left:auto;
+		  margin-right:auto;
+		  margin-top: 2px;
+		  margin-bottom: 5px;
+		  padding: 0px;
+		  display:none;
+	  }
+	  
+	  #button_to_map_mobile {
+	  	  width: 95%;
+		  background: none;
+		  text-align:center;
+		  margin-left:auto;
+		  margin-right:auto;
+		  margin-top: 10px;
+		  margin-bottom: 10px;
+		  padding: 0px; 
+		  display:block;
+	  }
+	  
+	  #blurb_about_demo_wrapper{
+	      width: 100%;
+		  background: #09F;
+		  margin:0px;
+		  padding:0px;
+		  border:none;
+	  }
+	  
+	  #blurb_about_demo_content{
+	      width: 80%;
+		  margin-left:auto;
+		  margin-right:auto;
+		  margin-top:5px;
+		  padding-top:5px;
+		  font-family:Tahoma, Geneva, sans-serif;
+		  font-size: 1.8em;
+		  line-height: 2em;
+		  text-align:center;
+		  color:#ffffff;
+	  }
+	  
+	  #footer_box_wrapper{
+	      width: 100%;
+		  background-color:#89cbed;
+		  text-align:center;
+		  margin:0px;
+		  padding:0px;
+		  border:none;
+		  border-top-width:2px;
+		  border-top-style:solid;
+		  border-top-color:#ffffff;
+	  }	
+	  
+	  #footer_box_content{
+		  width: 80%;
+		  margin-left:auto;
+		  margin-right:auto;
+	   	  font-family:Tahoma, Geneva, sans-serif;
+		  font-size: 1.1em;
+		  line-height: 1.4em;
+		  color:#ffffff;
+	  }	
+	  
+/*The media query. This CSS overwrites the corosponding elements (above) when the screen is over 641px in width.	*/
+@media (min-width: 641px) {
+    
+	  body {
+		  height: 100%; 
+		  margin: 0px; 
+		  padding: 0px;
+		  background-image: url('background9.jpg');
+		  background-color: #B3CDE6;
+		  background-repeat: no-repeat;
+		  background-attachment: fixed;
+		  background-position: right bottom; 
+	      background-size: cover;
+	  }
+	    
+	  #overall_wrapper {
+		  
+		  height: 100%;
+		  width: 40%; 
+		  margin-left: auto;
+          margin-right: auto;
+		  margin-top:0px;
+		  margin-bottom:0px;
+		  padding-left: 5%;
+		  padding-right: 5%;
+		  padding-top: 2%;
+		  padding-bottom: 2%;
+		  border-right-width: 2px;
+	  }
+	  
+	  #title_box{
+	      width: 400px;
+		  background-color:#89cbed;
+		  text-align:center;
+		  margin-left:auto;
+		  margin-right:auto;
+		  margin-bottom:2px;
+		  padding-top:10px;
+		  padding-bottom:10px;
+		  border-top-left-radius:20px;
+		  border-top-right-radius:20px;
+		  border-bottom-left-radius:0px;
+		  border-bottom-right-radius:0px;  
+	  }
+	  
+	  #yellow_line_and_arrow{
+	      width: 400px;
+		  text-align:center;
+		  margin-left:auto;
+		  margin-right:auto;
+		  margin-top:2px;
+		  display:block;
+	  }
+	  
+	  #button_to_map_standard{
+	      width: 95%;
+		  background: none;
+		  text-align:center;
+		  margin-left:auto;
+		  margin-right:auto;
+		  margin-top: 2px;
+		  margin-bottom: 5px;
+		  padding: 0px;
+		  display:block;
+	  }
+	  
+	  #button_to_map_mobile {
+	  	  width: 95%;
+		  background: none;
+		  text-align:center;
+		  margin-left:auto;
+		  margin-right:auto;
+		  margin-top: 2px;
+		  margin-bottom: 5px;
+		  padding: 0px; 
+	      display:none;
+	  }
+	  
+	  #blurb_about_demo_wrapper{
+	      width: 95%;
+		  background:#ffffff;
+		  text-align:center;
+		  margin-left:auto;
+		  margin-right:auto;
+		  margin-top: 10px;
+		  margin-bottom: 0px;
+		  padding-top:5px;
+		  padding-left:5px;
+		  padding-right:5px;
+		  padding-bottom:15px;
+		  border-top-left-radius:20px;
+		  border-top-right-radius:20px;
+		  border-bottom-left-radius:0px;
+		  border-bottom-right-radius:0px;
+	  }
+	  
+	  #blurb_about_demo_content{
+		  font-family:Tahoma, Geneva, sans-serif;
+		  font-size: 1.4em;
+		  line-height: 1.6em;
+		  color:#09C;
+	  }
+	  
+	  #footer_box_wrapper{
+	      width: 95%;
+		  background-color:#89cbed;
+		  text-align:center;
+		  margin-left:auto;
+		  margin-right:auto;
+		  margin-top:0px;
+		  margin-bottom:30px;
+		  padding-left: 5px;
+		  padding-right: 5px;
+		  padding-top: 1px;
+		  padding-bottom: 2px;
+		  border-radius: 20px;
+		  border-top-left-radius:0px;
+		  border-top-right-radius:0px;
+		  border-bottom-left-radius:20px;
+		  border-bottom-right-radius:20px;
+		  border-width:0px;
+	  }	
+	  
+	   #footer_box_content{
+		  font-family:Tahoma, Geneva, sans-serif;
+		  font-size: 0.9em;
+		  line-height: 1.3em;
+		  color:#ffffff;
+	  }	
+}	  
+
+</style>
+
+
+
+</head>
+
+<body>
+
+<div id="overall_wrapper">
+
+<div id="title_box"><img src="index_page_graphics/front_page_title.png" width="299" height="331" alt="Title"></div>
+
+<div id="yellow_line_and_arrow"><img src="index_page_graphics/yellow_line.png" width="400" height="52" alt="Yellow line"></div>
+
+
+<div id="button_to_map_standard"> <a href="tutorial4_standard.html"><img src="index_page_graphics/view_map_button.png" width="199" height="196"></a>
+</div>
+
+
+<div id="button_to_map_mobile"> <a href="tutorial4_mobile.html"><img src="index_page_graphics/view_map_button_mobile.png" width="199" height="196"></a>
+</div>
+
+
+<div id="blurb_about_demo_wrapper">
+  <div id="blurb_about_demo_content">
+    <img src="index_page_graphics/settings.svg" id="gears" ><br/>
+    Settings: This demo shows how media queries allow you to build responsive websites. If you are viewing this on a laptop or desktop computer, go ahead and drag the side of the browser in. Once the width goes below 640px (i.e. the width of an iPhone screen), the layout will change to be suitable for mobile devices. 
+  </div>
+</div>
+
+
+<div id="footer_box_wrapper">
+  <div id="footer_box_content">Demo created by Emily Bennett for Webdesigntuts.</div>
+</div>
+
+
+<!--Calling the Retina.js plungin-->
+<script type="text/javascript" src="retina_plugin/retina/retina.js"></script>
+<!--Calling the SVGeezy plungin-->
+<script type="text/javascript" src="svgeezy_plugin/svgeezy.js"></script>
+<script type="text/javascript">
+svgeezy.init(false, 'png'); 
+</script>
+
+</div>
+</body>
+</html>

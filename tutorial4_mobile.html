@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<title>UK - festivals - mobile map</title>
+
+<!--Connect to the google maps api using your api key-->
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY_HERE&sensor=true"></script>
+
+<!--Connects to jQuery-->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js" type="text/javascript"></script> 
+
+<!--Set up the CSS styles-->
+<style type="text/css">
+      html { 
+	      height: 100%;
+	  }
+      
+	  body {
+		  height: 100%; 
+		  margin: 0; 
+		  padding: 0;
+	  }
+	  
+	  #festival-map { 
+	  	  height: 100%;
+		  width: 100%; 
+		  position:fixed;
+		  top:0px;
+		  left:0px;
+		  z-index:99;
+	  }
+	  
+	  .pop_up_image_box_text {
+	 	  font-family: Verdana, Geneva, sans-serif;
+	 	  font-size: 16px; 
+		  line-height: 22px; 
+	 	  color: #000000; 
+	 	  display: inline; 
+		  width: 550px;
+		  height: 425px;
+	  }
+	  
+	  #swap_to_standard {
+		  height: 100%;
+		  width: 100%;
+		  background: rgba(0, 0, 0, 0.8);
+		  color:#ffffff;
+		  font-family: Verdana, Geneva, sans-serif;
+	 	  font-size: 24px; 
+		  line-height: 30px; 
+		  text-align:center;
+		  position:static;
+		  top:0px;
+		  left:0px;
+		  display:none;
+	}
+	
+	a {
+		color:#FFFFFF;
+	}
+	
+/*The media query. This CSS overwrites the corosponding elements (above) when the screen is over 641px in width.	*/
+@media (min-width: 641px) {
+
+	#swap_to_standard {
+		  height: 100%;
+		  width: 100%;
+		  background: rgba(0, 0, 0, 0.7);
+		  color:#ffffff;
+		  font-family: Verdana, Geneva, sans-serif;
+	 	  font-size: 24px; 
+		  line-height: 30px; 
+		  text-align:center;
+		  position:fixed;
+		  top:0px;
+		  left:0px;
+		  display:block;
+		  z-index:100;
+	}
+
+}
+	  
+</style>
+
+
+<!--Main chunk of javascript that creates and controls the map.-->
+<script type="text/javascript">
+
+//Set up the custom styles for the map. I've created two styles so the map can switch between them depending on the zoom level. i.e. there is far less detail when the map is zoomed out.
+
+//First, we read in the data describing style.
+var style_festival = [
+  {
+    "featureType": "administrative",
+    "stylers": [
+      { "visibility": "off" }
+    ]
+  },{
+    "featureType": "poi",
+    "stylers": [
+      { "visibility": "off" }
+    ]
+  },{
+    "featureType": "transit",
+    "stylers": [
+      { "visibility": "off" }
+    ]
+  },{
+    "featureType": "road",
+    "stylers": [
+      { "visibility": "off" }
+    ]
+  },{
+    "featureType": "landscape",
+    "stylers": [
+      { "color": "#FFE200" }
+    ]
+  },{
+    "featureType": "water",
+    "stylers": [
+      { "visibility": "on" },
+      { "color": "#4f92c6" }
+    ]
+  }
+];
+
+var style_festival_zoomed = [
+  {
+    "featureType": "administrative",
+    "stylers": [
+      { "visibility": "on" }
+    ]
+  },{
+    "featureType": "poi",
+    "stylers": [
+      { "visibility": "on" }
+    ]
+  },{
+    "featureType": "transit",
+    "stylers": [
+      { "visibility": "on" }
+    ]
+  },{
+    "featureType": "road",
+    "stylers": [
+      { "visibility": "on" }
+    ]
+  },{
+    "featureType": "landscape",
+    "stylers": [
+      { "color": "#FFE200" }
+    ]
+  },{
+    "featureType": "water",
+    "stylers": [
+      { "visibility": "on" },
+      { "color": "#4f92c6" }
+    ]
+  },   {
+    "featureType": "poi.park",
+	"elementType": "geometry",
+    "stylers": [
+      { "color": "#FFFF00" }
+    ]
+  }
+];
+
+//Then we use this data to create the styles. 
+var styled_festival = new google.maps.StyledMapType(style_festival, {name: "Festival style"});
+var styled_festival_zoomed = new google.maps.StyledMapType(style_festival_zoomed, {name: "Festival style zoomed"});
+
+//Create the variables that will be used within the map configuration options.
+//The latitude and longitude of the center of the map.
+var festivalMapCenter = new google.maps.LatLng(54.314320, -4.427490);
+//The degree to which the map is zoomed in. This can range from 0 (least zoomed) to 21 and above (most zoomed).
+var festivalMapZoom = 5;
+var festivalMapZoomMax = 14;
+var festivalMapZoomMin = 5;
+
+//These options configure the setup of the map. 
+var festivalMapOptions = { 
+		  center: festivalMapCenter, 
+          zoom: festivalMapZoom,
+		  maxZoom:festivalMapZoomMax,
+		  minZoom:festivalMapZoomMin,
+		  panControl: false,
+		  streetViewControl: false,
+		  mapTypeControl: false,
+		   mapTypeControlOptions: {
+     		mapTypeIds: [ 'map_styles_festival', 'map_styles_festival_zoomed']
+   		 }
+};
+
+//Create the variable for the main map itself.
+var festivalMap;	
+
+//When the page loads, the line below calls the function below called 'loadFestivalMap' to load up the map.
+google.maps.event.addDomListener(window, 'load', loadFestivalMap);
+
+//Create the reset map button.
+var resetButtonDiv = document.createElement('div');
+var festivalMapResetButton = new createResetButton(resetButtonDiv, festivalMap);
+
+//Create the arrays to hold the map markers as they are created in the functions (e.g. 'displaySmallEnglandImages') below. 
+var markerSmallWales = [];
+var infowindowSmallWales = [];
+
+var markerSmallEngland = [];
+var infowindowSmallEngland = [];
+
+var markerSmallIreland = [];
+var infowindowSmallIreland = [];
+
+var markerSmallScotland = [];
+var infowindowSmallScotland = [];
+
+
+//THE MAIN FUNCTION THAT IS CALLED WHEN THE WEB PAGE LOADS--------------------------------------------------------------------------------
+function loadFestivalMap() {
+	
+//The variable to hold the map was created above.
+festivalMap = new google.maps.Map(document.getElementById("festival-map"), festivalMapOptions);	
+
+//Assigning the two map styles defined above to the map.
+festivalMap.mapTypes.set('map_styles_festival', styled_festival);
+festivalMap.mapTypes.set('map_styles_festival_zoomed', styled_festival_zoomed);
+//Setting the one of the styles to display as default as the map loads.
+festivalMap.setMapTypeId('map_styles_festival');
+
+
+//Continuously listens out for when the zoom level changes. This includs when the map zooms when a marker is clicked.
+google.maps.event.addListener(festivalMap, "zoom_changed", function() {
+	var newZoom = festivalMap.getZoom();
+	//If the map is zoomed in, the switch to the style that shows the higher level of detail.
+	if (newZoom > 6){
+		//loads the detailed map style
+		festivalMap.setMapTypeId('map_styles_festival_zoomed');
+		//shows the 4 big markers for the countries
+		hideCountriesMarkerSet();
+		//loads up the markers for the indvidual festivals
+		showSmallWalesFestivalMarkers();
+		showSmallEnglandFestivalMarkers();
+		showSmallIrelandFestivalMarkers();
+		showSmallScotlandFestivalMarkers();
+			}
+	//Otherwise the map must be zoomed out, so use the style with the lower level of detail.
+	else {
+		//shows the less detailed map style
+		festivalMap.setMapTypeId('map_styles_festival');
+		//shows the 4 big markers for the countries
+		showCountriesMarkerSet();
+		//hides up the markers for the indvidual festivals
+		hideSmallWalesFestivalMarkers();
+		hideSmallEnglandFestivalMarkers();
+		hideSmallIrelandFestivalMarkers();
+		hideSmallScotlandFestivalMarkers();
+	}
+
+});
+
+//Add the control panel and reset button (created previously) to the map.
+festivalMap.controls[google.maps.ControlPosition.TOP_RIGHT].push(resetButtonDiv);
+
+//Loads up the 4 main big country markers.
+loadCountriesMapMarkers();
+
+//Calls the functions to grab the data from Flickr and create the smaller map markers for each festival.
+loadSmallWalesFestivalMapMarkers();
+loadSmallEnglandFestivalMapMarkers();
+loadSmallIrelandFestivalMapMarkers();
+loadSmallScotlandFestivalMapMarkers();
+
+}
+
+
+function loadCountriesMapMarkers(){
+
+//England marker - 
+
+//Setting the position of the England map marker.
+var markerPositionEngland = new google.maps.LatLng(51.792691, 0.318604);
+
+//Setting the icon to be used with the England map marker.
+var markerIconEngland = {
+  url: 'icons/mobile_icon_england.svg',
+  //The size image file.
+  size: new google.maps.Size(100, 100),
+  //The point on the image to measure the anchor from. 0, 0 is the top left.
+  origin: new google.maps.Point(0, 0),
+  //The x y coordinates of the anchor point on the marker. e.g. If your map marker was a drawing pin then the anchor would be the tip of the pin.
+  anchor: new google.maps.Point(50, 100)
+};
+
+//Setting the shape to be used with the England map marker.
+var markerShapeEngland = {
+      coord: [49,2,77,11,89,36,80,62,67,83,50,89,30,81,19,64,13,45,14,23,31,6],
+      type: 'poly'
+};
+
+//Creating the England map marker.
+markerEngland = new google.maps.Marker({
+      //uses the position set above.
+	  position: markerPositionEngland,
+	  //adds the marker to the map.
+      map: festivalMap,
+      title: 'England Festival',
+	  //assigns the icon image set above to the marker.
+	  icon: markerIconEngland,
+	  //assigns the icon shape set above to the marker.
+	  shape: markerShapeEngland,
+	  //sets the z-index of the map marker.
+	  zIndex:107
+});
+
+//Add an 'event listener' to the England map marker to listen out for when it is clicked.
+google.maps.event.addListener(markerEngland, "click", function (e) {
+	festivalMap.setZoom(7);
+	festivalMap.setCenter(markerPositionEngland);
+});
+
+
+
+//Northern Ireland - 
+
+//Setting the position of the Ireland map marker.
+var markerPositionIreland = new google.maps.LatLng(54.799596, -6.795044);
+
+//Setting the icon to be used with the Ireland map marker.
+var markerIconIreland = {
+  url: 'icons/mobile_icon_ireland.svg',
+  //The size image file.
+  size: new google.maps.Size(100, 100),
+  //The point on the image to measure the anchor from. 0, 0 is the top left.
+  origin: new google.maps.Point(0, 0),
+  //The x y coordinates of the anchor point on the marker. e.g. If your map marker was a drawing pin then the anchor would be the tip of the pin.
+  anchor: new google.maps.Point(50, 100)
+};
+
+//Setting the shape to be used with the Ireland map marker.
+var markerShapeIreland = {
+      coord: [49,2,77,11,89,36,80,62,67,83,50,89,30,81,19,64,13,45,14,23,31,6],
+      type: 'poly'
+};
+
+//Creating the Ireland map marker.
+markerIreland = new google.maps.Marker({
+      //uses the position set above.
+	  position: markerPositionIreland,
+	  //adds the marker to the map.
+      map: festivalMap,
+      title: 'Ireland Festival',
+	  //assigns the icon image set above to the marker.
+	  icon: markerIconIreland,
+	  //assigns the icon shape set above to the marker.
+	  shape: markerShapeIreland,
+	  //sets the z-index of the map marker.
+	  zIndex:107
+});
+
+//Add an 'event listener' to the Ireland map marker to listen out for when it is clicked.
+google.maps.event.addListener(markerIreland, "click", function (e) {
+	festivalMap.setZoom(7);
+	festivalMap.setCenter(markerPositionIreland);
+});
+
+
+//Scotland- 
+
+//Setting the position of the Scotland map marker.
+var markerPositionScotland = new google.maps.LatLng(56.900625, -3.622055);
+
+//Setting the icon to be used with the Scotland map marker.
+var markerIconScotland = {
+  url: 'icons/mobile_icon_scotland.svg',
+  //The size image file.
+  size: new google.maps.Size(100, 100),
+  //The point on the image to measure the anchor from. 0, 0 is the top left.
+  origin: new google.maps.Point(0, 0),
+  //The x y coordinates of the anchor point on the marker. e.g. If your map marker was a drawing pin then the anchor would be the tip of the pin.
+  anchor: new google.maps.Point(50, 100)
+};
+
+//Setting the shape to be used with the Scotland map marker.
+var markerShapeScotland = {
+      coord: [49,2,77,11,89,36,80,62,67,83,50,89,30,81,19,64,13,45,14,23,31,6],
+      type: 'poly'
+};
+
+//Creating the Scotland map marker.
+markerScotland = new google.maps.Marker({
+      //uses the position set above.
+	  position: markerPositionScotland,
+	  //adds the marker to the map.
+      map: festivalMap,
+      title: 'Scotland Festival',
+	  //assigns the icon image set above to the marker.
+	  icon: markerIconScotland,
+	  //assigns the icon shape set above to the marker.
+	  shape: markerShapeScotland,
+	  //sets the z-index of the map marker.
+	  zIndex:107
+});
+
+//Add an 'event listener' to the Scotland map marker to listen out for when it is clicked.
+google.maps.event.addListener(markerScotland, "click", function (e) {
+	festivalMap.setZoom(7);
+	festivalMap.setCenter(markerPositionScotland);
+});
+
+
+//Wales -
+
+//Setting the position of the Wales map marker.
+var markerPositionWales = new google.maps.LatLng(52.558403, -3.493652);
+
+//Setting the icon to be used with the Wales map marker.
+var markerIconWales = {
+  url: 'icons/mobile_icon_wales.svg',
+  //The size image file.
+  size: new google.maps.Size(100, 100),
+  //The point on the image to measure the anchor from. 0, 0 is the top left.
+  origin: new google.maps.Point(0, 0),
+  //The x y coordinates of the anchor point on the marker. e.g. If your map marker was a drawing pin then the anchor would be the tip of the pin.
+  anchor: new google.maps.Point(50, 100)
+};
+
+//Setting the shape to be used with the Wales map marker.
+var markerShapeWales = {
+      coord: [49,2,77,11,89,36,80,62,67,83,50,89,30,81,19,64,13,45,14,23,31,6],
+      type: 'poly'
+};
+
+//Creating the Wales map marker.
+markerWales = new google.maps.Marker({
+      //uses the position set above.
+	  position: markerPositionWales,
+	  //adds the marker to the map.
+      map: festivalMap,
+      title: 'Wales Festival',
+	  //assigns the icon image set above to the marker.
+	  icon: markerIconWales,
+	  //assigns the icon shape set above to the marker.
+	  shape: markerShapeWales,
+	  //sets the z-index of the map marker.
+	  zIndex:107
+});
+
+//Add an 'event listener' to the Wales map marker to listen out for when it is clicked.
+google.maps.event.addListener(markerWales, "click", function (e) {
+	festivalMap.setZoom(7);
+	festivalMap.setCenter(markerPositionWales);
+});
+
+}
+
+
+//Loads in the data for the markers for each festival in England.
+function loadSmallEnglandFestivalMapMarkers(){
+//Connects to the Flickr API and reads the results of the query into a JSON array. This query uses the 'flickr.photos.search' method to access all the photos in the 99915664@N08 account tagged with englandevent. It also uses arguments to read in the latitude and longitude of each picture. It passes the resultant JSON array to the 'displayImages' function below.
+$.getJSON("http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=YOUR_FLICKR_API_KEY_HERE&user_id=YOUR_FLICKR_ID_HERE&tags=englandevent&has_geo=1&extras=geo&format=json&json&jsoncallback=?", displaySmallEnglandImages);
+}
+
+function displaySmallEnglandImages(data){	
+		//Sets up the options for creating the map markers.
+		var markerIconSmallEnglandFestival = {
+  					url: 'icons/mobile_icon_england_small.svg',
+ 					size: new google.maps.Size(40, 40),
+  					origin: new google.maps.Point(0, 0),
+  					anchor: new google.maps.Point(20, 40)
+		};
+		var markerShapeSmallEnglandFestival = {
+   				    coord: [23,3,42,10,44,22,38,41,25,52,10,44,3,31,5,15,11,5],
+   				    type: 'poly'
+		};
+	
+	     //Loop through the results in the JSON array. The 'data.photos.photo' bit is what you are trying to 'get at'. i.e. this loop looks at each photo in turn.
+         $.each(data.photos.photo, function(i,item){
+			 
+					//Read in the lat and long of each photo and stores it in a variable.
+                    markerLat = item.latitude;
+					markerLong = item.longitude;
+					
+					//Read in the title of each photo
+					photoTitle = item.title;
+					
+					//Get the url for the image.
+					var photoURL = 'http://farm' + item.farm + '.static.flickr.com/' + item.server + '/' + item.id + '_' + item.secret + '_m.jpg';		
+								
+					htmlImageString = '<img src="' + photoURL + '" >';				
+					var contentString = '<div class="pop_up_image_box_text">' + photoTitle + '<br/>' + htmlImageString + '</div>';
+
+					//Create a new info window using the Google Maps API
+					infowindowSmallEngland[i] = new google.maps.InfoWindow({
+						 //Adds the content, which includes the html to display the image from Flickr, to the info window.
+  		 				 content: contentString,
+						 maxWidth: 500
+					});
+
+					//Create a new marker position using the Google Maps API
+					var myLatlngMarker = new google.maps.LatLng(markerLat,markerLong);
+
+					//Create a new marker using the Google Maps API and assign the marker to the map created above.
+					markerSmallEngland[i] = new google.maps.Marker({
+   					position: myLatlngMarker,
+     				map: festivalMap,
+					icon: markerIconSmallEnglandFestival,
+					shape: markerShapeSmallEnglandFestival,
+     				title:"Photo"
+					});
+
+					//Sets the visibility of the marker to false initially
+					markerSmallEngland[i].setVisible(false);
+					
+					//Uses the Google Maps API to add an event listener that triggers the info window to open if the box marker is clicked.
+					google.maps.event.addListener(markerSmallEngland[i], 'click', function() {
+  					infowindowSmallEngland[i].open(festivalMap,markerSmallEngland[i]);
+					//Makes marker icon come to the front when clicked.
+					this.setZIndex(google.maps.Marker.MAX_ZINDEX + 1);	
+					});
+					
+		});	
+					
+}
+
+
+
+
+	
+//Loads in the data for the markers for each festival in Northern Ireland.	
+function loadSmallIrelandFestivalMapMarkers(){
+//Connects to the Flickr API and reads the results of the query into a JSON array. This query uses the 'flickr.photos.search' method to access all the photos in the 99915664@N08 account tagged with irelandevent. It also uses arguments to read in the latitude and longitude of each picture. It passes the resultant JSON array to the 'displayImages' function below.
+$.getJSON("http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=YOUR_FLICKR_API_KEY_HERE&user_id=YOUR_FLICKR_ID_HERE&tags=irelandevent&has_geo=1&extras=geo&format=json&jsoncallback=?", displaySmallIrelandImages);
+}
+
+function displaySmallIrelandImages(data){	
+		//Sets up the options for creating the map markers.
+		var markerIconSmallIrelandFestival = {
+  					url: 'icons/mobile_icon_ireland_small.svg',
+ 					size: new google.maps.Size(40, 40),
+  					origin: new google.maps.Point(0, 0),
+  					anchor: new google.maps.Point(20, 40)
+		};
+		var markerShapeSmallIrelandFestival = {
+   				    coord: [23,3,42,10,44,22,38,41,25,52,10,44,3,31,5,15,11,5],
+   				    type: 'poly'
+		};
+	
+	     //Loop through the results in the JSON array. The 'data.photos.photo' bit is what you are trying to 'get at'. i.e. this loop looks at each photo in turn.
+         $.each(data.photos.photo, function(i,item){
+			 
+					//Read in the lat and long of each photo and stores it in a variable.
+                    markerLat = item.latitude;
+					markerLong = item.longitude;
+					
+					//Read in the title of each photo
+					photoTitle = item.title;
+					
+					//Get the url for the image.
+					var photoURL = 'http://farm' + item.farm + '.static.flickr.com/' + item.server + '/' + item.id + '_' + item.secret + '_m.jpg';		
+								
+					htmlImageString = '<img src="' + photoURL + '" >';				
+					var contentString = '<div class="pop_up_image_box_text">' + photoTitle + '<br/>' + htmlImageString + '</div>';
+
+					//Create a new info window using the Google Maps API
+					infowindowSmallIreland[i] = new google.maps.InfoWindow({
+						 //Adds the content, which includes the html to display the image from Flickr, to the info window.
+  		 				 content: contentString,
+						 maxWidth: 500
+					});
+
+					//Create a new marker position using the Google Maps API
+					var myLatlngMarker = new google.maps.LatLng(markerLat,markerLong);
+
+					//Create a new marker using the Google Maps API and assign the marker to the map created above.
+					markerSmallIreland[i] = new google.maps.Marker({
+   					position: myLatlngMarker,
+     				map: festivalMap,
+					icon: markerIconSmallIrelandFestival,
+					shape: markerShapeSmallIrelandFestival,
+     				title:"Photo"
+					});
+
+					//Sets the visibility of the marker to false initially
+					markerSmallIreland[i].setVisible(false);
+					
+					//Uses the Google Maps API to add an event listener that triggers the info window to open if the box marker is clicked.
+					google.maps.event.addListener(markerSmallIreland[i], 'click', function() {
+  					infowindowSmallIreland[i].open(festivalMap,markerSmallIreland[i]);
+					//Makes marker icon come to the front when clicked.
+					this.setZIndex(google.maps.Marker.MAX_ZINDEX + 1);	
+					});
+					
+		});	
+					
+}
+
+
+//Loads in the data for the markers for each festival in Scotland.
+function loadSmallScotlandFestivalMapMarkers(){
+//Connects to the Flickr API and reads the results of the query into a JSON array. This query uses the 'flickr.photos.search' method to access all the photos in the 99915664@N08 account tagged with scotlandevent. It also uses arguments to read in the latitude and longitude of each picture. It passes the resultant JSON array to the 'displayImages' function below.
+$.getJSON("http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=YOUR_FLICKR_API_KEY_HERE&user_id=YOUR_FLICKR_ID_HERE&tags=scotlandevent&has_geo=1&extras=geo&format=json&jsoncallback=?", displaySmallScotlandImages);
+}
+
+function displaySmallScotlandImages(data){	
+		//Sets up the options for creating the map markers.
+		var markerIconSmallScotlandFestival = {
+  					url: 'icons/mobile_icon_scotland_small.svg',
+ 					size: new google.maps.Size(40, 40),
+  					origin: new google.maps.Point(0, 0),
+  					anchor: new google.maps.Point(20, 40)
+		};
+		var markerShapeSmallScotlandFestival = {
+   				    coord: [23,3,42,10,44,22,38,41,25,52,10,44,3,31,5,15,11,5],
+   				    type: 'poly'
+		};
+	
+	     //Loop through the results in the JSON array. The 'data.photos.photo' bit is what you are trying to 'get at'. i.e. this loop looks at each photo in turn.
+         $.each(data.photos.photo, function(i,item){
+			 
+					//Read in the lat and long of each photo and stores it in a variable.
+                    markerLat = item.latitude;
+					markerLong = item.longitude;
+					
+					//Read in the title of each photo
+					photoTitle = item.title;
+					
+					//Get the url for the image.
+					var photoURL = 'http://farm' + item.farm + '.static.flickr.com/' + item.server + '/' + item.id + '_' + item.secret + '_m.jpg';		
+								
+					htmlImageString = '<img src="' + photoURL + '" >';				
+					var contentString = '<div class="pop_up_image_box_text">' + photoTitle + '<br/>' + htmlImageString + '</div>';
+
+					//Create a new info window using the Google Maps API
+					infowindowSmallScotland[i] = new google.maps.InfoWindow({
+						 //Adds the content, which includes the html to display the image from Flickr, to the info window.
+  		 				 content: contentString,
+						 maxWidth: 500
+					});
+
+					//Create a new marker position using the Google Maps API
+					var myLatlngMarker = new google.maps.LatLng(markerLat,markerLong);
+
+					//Create a new marker using the Google Maps API and assign the marker to the map created above.
+					markerSmallScotland[i] = new google.maps.Marker({
+   					position: myLatlngMarker,
+     				map: festivalMap,
+					icon: markerIconSmallScotlandFestival,
+					shape: markerShapeSmallScotlandFestival,
+     				title:"Photo"
+					});
+
+					//Sets the visibility of the marker to false initially
+					markerSmallScotland[i].setVisible(false);
+					
+					//Uses the Google Maps API to add an event listener that triggers the info window to open if the box marker is clicked.
+					google.maps.event.addListener(markerSmallScotland[i], 'click', function() {
+  					infowindowSmallScotland[i].open(festivalMap,markerSmallScotland[i]);
+					//Makes marker icon come to the front when clicked.
+					this.setZIndex(google.maps.Marker.MAX_ZINDEX + 1);	
+					});
+					
+		});	
+					
+}
+
+
+
+//Loads in the data for the markers for each festival in Wales.
+function loadSmallWalesFestivalMapMarkers(){
+//Connects to the Flickr API and reads the results of the query into a JSON array. This query uses the 'flickr.photos.search' method to access all the photos in the 99915664@N08 account tagged with walesevent. It also uses arguments to read in the latitude and longitude of each picture. It passes the resultant JSON array to the 'displayImages' function below.
+$.getJSON("http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=YOUR_FLICKR_API_KEY_HERE&user_id=YOUR_FLICKR_ID_HERE&tags=walesevent&has_geo=1&extras=geo&format=json&jsoncallback=?", displaySmallWalesImages);
+}
+
+function displaySmallWalesImages(data){	
+		//Sets up the options for creating the map markers.
+		var markerIconSmallWalesFestival = {
+  					url: 'icons/mobile_icon_wales_small.svg',
+ 					size: new google.maps.Size(40, 40),
+  					origin: new google.maps.Point(0, 0),
+  					anchor: new google.maps.Point(20, 40)
+		};
+		var markerShapeSmallWalesFestival = {
+   				    coord: [23,3,42,10,44,22,38,41,25,52,10,44,3,31,5,15,11,5],
+   				    type: 'poly'
+		};
+	
+	     //Loop through the results in the JSON array. The 'data.photos.photo' bit is what you are trying to 'get at'. i.e. this loop looks at each photo in turn.
+         $.each(data.photos.photo, function(i,item){
+			 
+					//Read in the lat and long of each photo and stores it in a variable.
+                    markerLat = item.latitude;
+					markerLong = item.longitude;
+					
+					//Read in the title of each photo
+					photoTitle = item.title;
+					
+					//Get the url for the image.
+					var photoURL = 'http://farm' + item.farm + '.static.flickr.com/' + item.server + '/' + item.id + '_' + item.secret + '_m.jpg';		
+								
+					htmlImageString = '<img src="' + photoURL + '" >';				
+					var contentString = '<div class="pop_up_image_box_text">' + photoTitle + '<br/>' + htmlImageString + '</div>';
+
+					//Create a new info window using the Google Maps API
+					infowindowSmallWales[i] = new google.maps.InfoWindow({
+						 //Adds the content, which includes the html to display the image from Flickr, to the info window.
+  		 				 content: contentString,
+						 maxWidth: 500
+					});
+
+					//Create a new marker position using the Google Maps API
+					var myLatlngMarker = new google.maps.LatLng(markerLat,markerLong);
+
+					//Create a new marker using the Google Maps API and assign the marker to the map created above.
+					markerSmallWales[i] = new google.maps.Marker({
+   					position: myLatlngMarker,
+     				map: festivalMap,
+					icon: markerIconSmallWalesFestival,
+					shape: markerShapeSmallWalesFestival,
+     				title:"Photo"
+					});
+
+					//Sets the visibility of the marker to false initially
+					markerSmallWales[i].setVisible(false);
+					
+					//Uses the Google Maps API to add an event listener that triggers the info window to open if the box marker is clicked.
+					google.maps.event.addListener(markerSmallWales[i], 'click', function() {
+  					infowindowSmallWales[i].open(festivalMap,markerSmallWales[i]);
+					//Makes marker icon come to the front when clicked.
+					this.setZIndex(google.maps.Marker.MAX_ZINDEX + 1);	
+					});
+					
+		});	
+					
+}
+
+
+
+
+//Function that shows the big country markers
+function showCountriesMarkerSet(){
+	markerEngland.setVisible (true); 
+	markerIreland.setVisible (true); 
+	markerScotland.setVisible (true); 
+	markerWales.setVisible (true); 
+}
+
+//Function that hides the big country markers
+function hideCountriesMarkerSet(){
+	markerEngland.setVisible (false); 
+	markerIreland.setVisible (false); 
+	markerScotland.setVisible (false); 
+	markerWales.setVisible (false);  
+}
+
+
+
+//Function that shows the english festival smaller markers
+function showSmallEnglandFestivalMarkers(){
+	for (var i = 0; i < markerSmallEngland.length; i++) {
+    	markerSmallEngland[i].setVisible(true);
+    }
+}
+//Function that hides the english festival smaller markers
+function hideSmallEnglandFestivalMarkers(){
+	for (var i = 0; i < markerSmallEngland.length; i++) {
+    	markerSmallEngland[i].setVisible(false);
+    }
+}
+
+//Function that shows the northern-irish festival smaller markers
+function showSmallIrelandFestivalMarkers(){
+	for (var i = 0; i < markerSmallIreland.length; i++) {
+    	markerSmallIreland[i].setVisible(true);
+    }
+}
+//Function that hides the northern-irish festival smaller markers
+function hideSmallIrelandFestivalMarkers(){
+	for (var i = 0; i < markerSmallIreland.length; i++) {
+    	markerSmallIreland[i].setVisible(false);
+    }
+}
+
+//Function that shows the scotish festival smaller markers
+function showSmallScotlandFestivalMarkers(){
+	for (var i = 0; i < markerSmallScotland.length; i++) {
+    	markerSmallScotland[i].setVisible(true);
+    }
+}
+//Function that hides the scotish festival smaller markers
+function hideSmallScotlandFestivalMarkers(){
+	for (var i = 0; i < markerSmallScotland.length; i++) {
+    	markerSmallScotland[i].setVisible(false);
+    }
+}
+
+//Function that shows the welsh festival smaller markers
+function showSmallWalesFestivalMarkers(){
+	for (var i = 0; i < markerSmallWales.length; i++) {
+    	markerSmallWales[i].setVisible(true);
+    }
+}
+//Function that hides the welsh festival smaller markers
+function hideSmallWalesFestivalMarkers(){
+	for (var i = 0; i < markerSmallWales.length; i++) {
+    	markerSmallWales[i].setVisible(false);
+    }
+}
+
+
+
+//Function that creates the 'Reset map' button.
+function createResetButton (resetButtonDiv){
+  resetButtonDiv.style.padding = '0px';  
+  controlUI2 = document.createElement('div');
+  controlUI2.style.width='50px';
+  controlUI2.style.height='50px';
+  controlUI2.innerHTML = '<div onClick="handelRequests(\'reset\')" OnMouseOver="this.style.cursor=\'pointer\';" OnMouseOut="this.style.cursor=\'default\';" ><img src="icons/refresh.svg" width="50" height="50" border="0"/></div>';
+  resetButtonDiv.appendChild(controlUI2);
+}
+
+//Function that is called when the 'Reset map' button is pressed.
+function handelRequests (buttonPressed) {
+//Resets the map to it's orignal state when the Reset Map button is clicked.	
+if (buttonPressed === "reset"){
+	//Resets the zoom, map position and marker z-indexes back to their orignal position. Also closes all infoboxes currently open.
+	festivalMap.setZoom(festivalMapZoom);
+	festivalMap.setCenter(festivalMapCenter);
+	//This is a function I've created (below) that closes any info boxes that are open.
+	closeEvents();
+	//shows the set of 4 big country markers
+	showCountriesMarkerSet();
+}
+}
+
+function closeEvents (){
+	//hides all the map markers for the festivals.
+	hideSmallEnglandFestivalMarkers();
+	hideSmallIrelandFestivalMarkers();
+	hideSmallScotlandFestivalMarkers();
+	hideSmallWalesFestivalMarkers();
+	
+    //Close an photos for english festivals
+   	for (var i = 0; i < markerSmallEngland.length; i++) {
+    infowindowSmallEngland[i].close();
+   }
+   
+    //Close an photos for scotish festivals
+   	for (var i = 0; i < markerSmallScotland.length; i++) {
+    infowindowSmallScotland[i].close();
+   }
+   
+    //Close an photos for northern irish festivals
+   	for (var i = 0; i < markerSmallIreland.length; i++) {
+    infowindowSmallIreland[i].close();
+   }
+   
+    //Close an photos for welsh festivals
+   	for (var i = 0; i < markerSmallWales.length; i++) {
+    infowindowSmallWales[i].close();
+   }
+   
+}   
+
+
+</script>
+
+</head>
+
+<body>
+
+<!--Create div that appears (due to media query within the CSS above) if this mobile view map has been accessed on a device with screen width over 641px. -->  
+<div id="swap_to_standard"><p>&nbsp;</p>You are trying to view the mobile view, but your screen can cope with the desktop view! <p>&nbsp;</p><a href="tutorial4_standard.html" target="_self">Swap to the desktop/laptop/tablet view</a>.<p>&nbsp;</p>Or if you'd like to see the mobile version then drag the side of your browser window in until it is less than 640px in width.</div>    
+    
+<!--Create the div to hold the map.-->
+<div id="festival-map"></div>  
+    
+<script type="text/javascript" src="svgeezy_plugin/svgeezy.js"></script>
+<script type="text/javascript">
+svgeezy.init(false, 'png'); // this will let the plugin check all images
+</script>
+
+</body>
+</html>
